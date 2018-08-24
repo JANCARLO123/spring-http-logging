@@ -1,0 +1,17 @@
+spring:
+  application:
+    name: logging-app
+  logging:
+    http:
+      pattern:
+        request: "{\"request\":{\"method\":\"%s\",\"path\":\"%s\",\"payload\":\"%s\"}}"
+        response: "{\"response\":{\"method\":\"%s\",\"path\":\"%s\",\"payload\":\"%s\"}}"
+      emptyPayloadPattern: ---
+server:
+  port: 8090
+logging:
+  level:
+    pl.piomin.spring.logging.interceptor.SpringLoggingInterceptor: INFO
+    pl.piomin.spring.logging.controller.ExampleController: TRACE
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %clr([%4X{time}]) - %m%n"
