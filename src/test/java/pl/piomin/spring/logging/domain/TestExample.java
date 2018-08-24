@@ -1,14 +1,14 @@
 package pl.piomin.spring.logging.domain;
 
-public class Example {
+public class TestExample {
 
     private Integer id;
     private String name;
 
-    public Example() {
+    public TestExample() {
     }
 
-    public Example(Integer id, String name) {
+    public TestExample(Integer id, String name) {
         this.id = id;
         this.name = name;
     }

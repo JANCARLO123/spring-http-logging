@@ -1,12 +1,7 @@
 spring:
   application:
     name: logging-app
-  logging:
-    http:
-      pattern:
-        request: "{\"request\":{\"method\":\"%s\",\"path\":\"%s\",\"payload\":\"%s\"}}"
-        response: "{\"response\":{\"method\":\"%s\",\"path\":\"%s\",\"payload\":\"%s\"}}"
-      emptyPayloadPattern: ---
+
 server:
   port: 8090
 logging:

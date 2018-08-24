@@ -5,21 +5,18 @@ import org.aopalliance.intercept.MethodInvocation;
 import org.apache.commons.logging.Log;
 import org.slf4j.MDC;
 import org.springframework.aop.interceptor.AbstractMonitoringInterceptor;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
+import pl.piomin.spring.logging.configuration.SpringHttpLoggingConfig;
 
 import java.lang.reflect.Method;
 
 public class SpringLoggingInterceptor extends AbstractMonitoringInterceptor {
 
-    @Value("${spring.logging.http.pattern.request}")
-    String pattern;
-    @Value("${spring.logging.http.pattern.response}")
-    String patternResponse;
-    @Value("${spring.logging.http.emptyPayloadPattern}")
-    String emptyPayloadPattern;
+    @Autowired
+    SpringHttpLoggingConfig config;
 
     public SpringLoggingInterceptor() {
         setUseDynamicLogger(true);
@@ -28,19 +25,26 @@ public class SpringLoggingInterceptor extends AbstractMonitoringInterceptor {
     @Override
     protected Object invokeUnderTrace(MethodInvocation methodInvocation, Log log) throws Throwable {
         MDC.clear();
-        long start = System.currentTimeMillis();
-        ObjectMapper mapper = new ObjectMapper();
-        ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.currentRequestAttributes();
+        final long start = System.currentTimeMillis();
+        final ObjectMapper mapper = new ObjectMapper();
+        final ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.currentRequestAttributes();
         MDC.put("method", attrs.getRequest().getMethod());
         MDC.put("path", attrs.getRequest().getRequestURI());
-        Integer indexOfBody = getBody(methodInvocation.getMethod());
+
+        String msg = null;
+        final Integer indexOfBody = getBody(methodInvocation.getMethod());
         if (indexOfBody != null) {
             Object object = methodInvocation.getArguments()[indexOfBody];
-            String msg = String.format(pattern, attrs.getRequest().getMethod(), attrs.getRequest().getRequestURI(), mapper.writeValueAsString(object));
-            log.info(msg);
+            msg = String.format(config.getPatternRequest(), attrs.getRequest().getMethod(), attrs.getRequest().getRequestURI(), mapper.writeValueAsString(object));
         } else {
-            String msg = String.format(pattern, attrs.getRequest().getMethod(), attrs.getRequest().getRequestURI(), emptyPayloadPattern);
-            log.info(msg);
+            msg = String.format(config.getPatternRequest(), attrs.getRequest().getMethod(), attrs.getRequest().getRequestURI(), config.getEmptyPayloadPattern());
+        }
+        log.info(msg);
+
+        String[] includeHeadersTab = config.getIncludeHeaders().split(",");
+        for (int i = 0; i < includeHeadersTab.length; i++) {
+            String headerValue = attrs.getRequest().getHeader(includeHeadersTab[i]);
+            MDC.put(includeHeadersTab[i], headerValue);
         }
 
         Object objectRet = null;
@@ -50,8 +54,17 @@ public class SpringLoggingInterceptor extends AbstractMonitoringInterceptor {
         } finally {
             long end = System.currentTimeMillis();
             long time = end - start;
-            String msg = String.format(patternResponse, attrs.getRequest().getMethod(), attrs.getRequest().getRequestURI(), mapper.writeValueAsString(objectRet));
             MDC.put("time", String.valueOf(time));
+            MDC.put("status", String.valueOf(attrs.getResponse().getStatus()));
+
+            for (int i = 0; i < includeHeadersTab.length; i++) {
+                attrs.getResponse().setHeader(includeHeadersTab[i], MDC.get(includeHeadersTab[i]));
+            }
+
+            if (objectRet != null)
+                msg = String.format(config.getPatternResponse(), attrs.getRequest().getMethod(), attrs.getRequest().getRequestURI(), mapper.writeValueAsString(objectRet));
+            else
+                msg = String.format(config.getPatternResponse(), attrs.getRequest().getMethod(), attrs.getRequest().getRequestURI(), config.getEmptyPayloadPattern());
             log.info(msg);
         }
     }
