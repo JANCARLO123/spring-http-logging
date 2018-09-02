@@ -24,7 +24,6 @@ public class SpringLoggingInterceptor extends AbstractMonitoringInterceptor {
 
     @Override
     protected Object invokeUnderTrace(MethodInvocation methodInvocation, Log log) throws Throwable {
-        MDC.clear();
         final long start = System.currentTimeMillis();
         final ObjectMapper mapper = new ObjectMapper();
         final ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.currentRequestAttributes();
@@ -41,7 +40,7 @@ public class SpringLoggingInterceptor extends AbstractMonitoringInterceptor {
         }
         log.info(msg);
 
-        String[] includeHeadersTab = config.getIncludeHeaders().split(",");
+        String[] includeHeadersTab = config.getIncludeHeaders().isEmpty() ? new String[0] : config.getIncludeHeaders().split(",");
         for (int i = 0; i < includeHeadersTab.length; i++) {
             String headerValue = attrs.getRequest().getHeader(includeHeadersTab[i]);
             MDC.put(includeHeadersTab[i], headerValue);
@@ -66,6 +65,7 @@ public class SpringLoggingInterceptor extends AbstractMonitoringInterceptor {
             else
                 msg = String.format(config.getPatternResponse(), attrs.getRequest().getMethod(), attrs.getRequest().getRequestURI(), config.getEmptyPayloadPattern());
             log.info(msg);
+            MDC.clear();
         }
     }
 
